@@ -1,0 +1,442 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "import graphlab as gl"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "import numpy as np\n",
+    "import scipy as sp\n",
+    "import pandas as pd"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 1.Reading Data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "features = pd.read_csv(\"features.csv\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "features_check = pd.read_csv(\"features_test.csv\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "#features_check.print_rows(num_rows=3, num_columns=109)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 2. Reshaping data"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [],
+   "source": [
+    "name_vector = features_check.columns\n",
+    "features = features.fillna(0)\n",
+    "y = features['radiant_win']\n",
+    "data=features[name_vector]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 3. Enriching dataset "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/opt/anaconda/anaconda2/lib/python2.7/site-packages/ipykernel/__main__.py:22: SettingWithCopyWarning: \n",
+      "A value is trying to be set on a copy of a slice from a DataFrame.\n",
+      "Try using .loc[row_indexer,col_indexer] = value instead\n",
+      "\n",
+      "See the caveats in the documentation: http://pandas.pydata.org/pandas-docs/stable/indexing.html#indexing-view-versus-copy\n"
+     ]
+    }
+   ],
+   "source": [
+    "heroes = pd.read_csv('dictionaries/heroes2.csv', ';')\n",
+    "type_vector = list(heroes.columns)[3:]\n",
+    "heroes['sum']=1.*heroes[type_vector].sum(axis=1)\n",
+    "for i in xrange(len(type_vector)):\n",
+    "    heroes[type_vector[i]]=np.divide(heroes[type_vector[i]],heroes['sum'])\n",
+    "del heroes['sum']\n",
+    "new = []\n",
+    "r_old = []\n",
+    "d_old = []\n",
+    "type_vector = list(heroes.columns)[3:]\n",
+    "attr = ['_hero', '_level', '_xp', '_gold', '_lh', '_kills', '_deaths', '_items']\n",
+    "for k in type_vector:\n",
+    "    for i in attr:\n",
+    "        new += [k+i]\n",
+    "for k in range(0,5):\n",
+    "    for i in attr:\n",
+    "        r_old+=['r'+str(k+1)+i] \n",
+    "for k in range(0,5):\n",
+    "    for i in attr:\n",
+    "        d_old+=['d'+str(k+1)+i] \n",
+    "for i in list(new):\n",
+    "    data[i]=0\n",
+    "type_vector = list(heroes.columns)[3:12]\n",
+    "type_vector.append('match_id')\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/opt/anaconda/anaconda2/lib/python2.7/site-packages/ipykernel/__main__.py:2: FutureWarning: sort(columns=....) is deprecated, use sort_values(by=.....)\n",
+      "  from ipykernel import kernelapp as app\n",
+      "/opt/anaconda/anaconda2/lib/python2.7/site-packages/ipykernel/__main__.py:4: FutureWarning: sort(columns=....) is deprecated, use sort_values(by=.....)\n"
+     ]
+    }
+   ],
+   "source": [
+    "for j in xrange(5):\n",
+    "    R = pd.merge(data[['match_id',r_old[8*j]]],heroes,left_on=r_old[8*j],right_on='id').sort(\"match_id\")\n",
+    "    R.index = range(0,len(R))\n",
+    "    D = pd.merge(data[['match_id',d_old[8*j]]],heroes,left_on=d_old[8*j],right_on='id').sort(\"match_id\")\n",
+    "    D.index = range(0,len(D))\n",
+    "    for i in xrange(9):\n",
+    "        for k in xrange(8):\n",
+    "            x=type_vector[i]\n",
+    "            if k == 0:\n",
+    "                data[new[8*i+k]]+=R[x]\n",
+    "                data[new[8*i+k]]-=D[x]\n",
+    "            else:\n",
+    "                data[new[8*i+k]]+=R[x]*data[r_old[8*j+k]]\n",
+    "                data[new[8*i+k]]-=D[x]*data[d_old[8*j+k]]             "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 4. Splitting train and test"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "import sklearn\n",
+    "from sklearn.cross_validation import train_test_split\n",
+    "from sklearn.metrics import roc_auc_score\n",
+    "import sklearn.metrics"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/opt/anaconda/anaconda2/lib/python2.7/site-packages/ipykernel/__main__.py:1: FutureWarning: convert_objects is deprecated.  Use the data-type specific converters pd.to_datetime, pd.to_timedelta and pd.to_numeric.\n",
+      "  if __name__ == '__main__':\n"
+     ]
+    }
+   ],
+   "source": [
+    "data['first_blood_player2']=data['first_blood_player2'].convert_objects(convert_numeric=True)\n",
+    "data=data.fillna(0)\n",
+    "Xf = data[data.columns[2:]]\n",
+    "Xf_train, Xf_test, y_train, y_test = train_test_split(Xf, y, test_size=0.1, random_state=42)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 5. Logistics regression"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.linear_model import LogisticRegression"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "model1f = LogisticRegression(C=0.01, penalty='l1', tol=0.01, random_state=42)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "LogisticRegression(C=0.01, class_weight=None, dual=False, fit_intercept=True,\n",
+       "          intercept_scaling=1, max_iter=100, multi_class='ovr', n_jobs=1,\n",
+       "          penalty='l1', random_state=42, solver='liblinear', tol=0.01,\n",
+       "          verbose=0, warm_start=False)"
+      ]
+     },
+     "execution_count": 15,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "model1f.fit(Xf_train,y_train)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "0.65535328602283249"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "model1f.score(Xf_test,y_test)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0.722434896534\n"
+     ]
+    }
+   ],
+   "source": [
+    "pred1f = model1f.predict_proba(Xf_test)[:, 1]\n",
+    "print roc_auc_score(y_test, pred1f)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# 7. Gradient boosting"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 49,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": [
+    "from sklearn.ensemble import GradientBoostingClassifier\n",
+    "from sklearn.metrics import log_loss\n",
+    "from sklearn.metrics import roc_auc_score"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 50,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "      Iter       Train Loss   Remaining Time \n",
+      "         1           1.3679            7.83m\n",
+      "         2           1.3547            7.59m\n",
+      "         3           1.3417            7.49m\n",
+      "         4           1.3299            7.41m\n",
+      "         5           1.3205            7.34m\n",
+      "         6           1.3131            7.38m\n",
+      "         7           1.3055            7.38m\n",
+      "         8           1.2991            7.35m\n",
+      "         9           1.2932            7.35m\n",
+      "        10           1.2878            7.32m\n",
+      "        20           1.2543            7.13m\n",
+      "        30           1.2364            6.87m\n",
+      "        40           1.2245            6.60m\n",
+      "        50           1.2149            6.36m\n",
+      "        60           1.2075            6.08m\n",
+      "        70           1.2004            5.82m\n",
+      "        80           1.1941            5.55m\n",
+      "        90           1.1887            5.27m\n",
+      "       100           1.1837            5.00m\n",
+      "       200           1.1415            2.47m\n",
+      "       300           1.1095            0.00s\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "GradientBoostingClassifier(init=None, learning_rate=0.3, loss='deviance',\n",
+       "              max_depth=3, max_features=None, max_leaf_nodes=None,\n",
+       "              min_samples_leaf=1, min_samples_split=2,\n",
+       "              min_weight_fraction_leaf=0.0, n_estimators=300,\n",
+       "              presort='auto', random_state=241, subsample=1.0,\n",
+       "              verbose=True, warm_start=False)"
+      ]
+     },
+     "execution_count": 50,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "model2f = GradientBoostingClassifier(n_estimators=300, verbose=True, random_state=241, learning_rate=0.3)\n",
+    "model2f.fit(Xf_train,y_train)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 51,
+   "metadata": {
+    "collapsed": false
+   },
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "0.717801225482\n"
+     ]
+    }
+   ],
+   "source": [
+    "pred2f = model2f.predict_proba(Xf_test)[:, 1]\n",
+    "print roc_auc_score(y_test, pred2f)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {
+    "collapsed": true
+   },
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 2",
+   "language": "python",
+   "name": "python2"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 2
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython2",
+   "version": "2.7.11"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 0
+}
